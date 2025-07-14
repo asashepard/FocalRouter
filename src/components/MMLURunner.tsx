@@ -4,6 +4,7 @@ import { sampleWithSeed } from "../utils/seedTools";
 import { chooseBestModelForPrompt } from "../utils/chooseBestModelForPrompt";
 import { callLLM } from "../utils/providerCalls";
 import { pushEntry } from "./Leaderboard";
+import { MODEL_REGISTRY } from "../utils/modelRegistry";
 
 type State = "idle" | "running" | "done" | "fail";
 
@@ -27,39 +28,32 @@ export default function MMLURunner() {
             setLog([]);
             setIdx(0);
             setCorrect(0);
+
             append("Loading CSV…");
             const all = dataset ?? (await loadCsv("mmlu"));
             setDataset(all);
             if (n < 1 || n > all.length) throw new Error("Invalid N");
+
             const sample = sampleWithSeed(all, n, seed);
             const keys = JSON.parse(localStorage.getItem("apiKeys") || "{}");
-
-            const mapResponseToLetter = (resp: string, q: CsvQ): string | null => {
-                const clean = resp.trim().toUpperCase();
-                // 1. first char A-D?
-                if (/^[ABCD]$/.test(clean[0])) return clean[0];
-
-                // 2. matches “A.”, “B)”, “(C”, etc.
-                const m = clean.match(/\b([ABCD])[\).]/);
-                if (m) return m[1];
-
-                // 3. contains the full option text
-                for (const letter of ["A", "B", "C", "D"] as const) {
-                    const text = q[letter].toUpperCase().replace(/[^A-Z0-9]/g, " ").trim();
-                    if (text && clean.includes(text)) return letter;
-                }
-                return null;
-            };
+            const g4o = MODEL_REGISTRY.find((m) => m.name === "gpt-4o")!;
 
             let correctCnt = 0;
+            let costActual = 0;
+            let cost4o = 0;
+
             for (let i = 0; i < sample.length; i++) {
                 setIdx(i);
                 const q = sample[i];
+
                 const prompt =
                     q.prompt +
                     "\n\n" +
-                    ["A", "B", "C", "D"].map((k) => `${k}. ${q[k as keyof CsvQ]}`).join("\n") +
+                    ["A", "B", "C", "D"]
+                        .map((k) => `${k}. ${q[k as keyof CsvQ]}`)
+                        .join("\n") +
                     "\n\nRespond **only** with one of the letters A, B, C, or D. No explanation.";
+
                 const [modelInfo] = await chooseBestModelForPrompt(prompt, keys);
                 const resp = await callLLM(
                     modelInfo.provider,
@@ -67,17 +61,56 @@ export default function MMLURunner() {
                     [{ role: "user", content: prompt }],
                     keys
                 );
+
+                const mapResponseToLetter = (resp: string, q: CsvQ): string | null => {
+                    const clean = resp.trim().toUpperCase();
+                    // 1. first char A-D?
+                    if (/^[ABCD]$/.test(clean[0])) return clean[0];
+
+                    // 2. matches “A.”, “B)”, “(C”, etc.
+                    const m = clean.match(/\b([ABCD])[\).]/);
+                    if (m) return m[1];
+
+                    // 3. contains the full option text
+                    for (const letter of ["A", "B", "C", "D"] as const) {
+                        const text = q[letter].toUpperCase().replace(/[^A-Z0-9]/g, " ").trim();
+                        if (text && clean.includes(text)) return letter;
+                    }
+                    return null;
+                };
+
+                /* --- scoring --- */
                 const letter = mapResponseToLetter(resp, q);
-                const ok = letter === q.answer?.toUpperCase();
+                const ok = letter === q.answer;
                 if (ok) correctCnt++;
 
-                setCorrect(correctCnt);
+                /* --- cost --- */
+                const tok = Math.round((prompt.length + resp.length) / 4);
+                const price = (modelInfo.inputPricePerMillion + modelInfo.outputPricePerMillion) / 2;
+                const price4o = (g4o.inputPricePerMillion + g4o.outputPricePerMillion) / 2;
+
+                costActual += (tok * price) / 1_000_000;
+                cost4o += (tok * price4o) / 1_000_000;
+
+                setCorrect(correctCnt); // live UI
+
                 append(
                     `${i + 1}/${n} ${ok ? "✓" : "✗"} (${letter ?? "?"}) via ${modelInfo.name}`
                 );
             }
 
-            const pct = Math.round((100 * (correct + 0.0001)) / n);
+            /* --- summary --- */
+            const pct = Math.round((100 * correctCnt) / n);
+            const savings = cost4o - costActual;
+            const savePct = cost4o ? Math.round((100 * savings) / cost4o) : 0;
+
+            append(
+                `Done – score ${correctCnt}/${n} (${pct}%)\n` +
+                `Cost: $${costActual.toFixed(4)} | GPT-4o baseline $${cost4o.toFixed(
+                    4
+                )} | Savings $${savings.toFixed(4)} (${savePct}%)`
+            );
+
             pushEntry({
                 ts: Date.now(),
                 percent: pct,
@@ -86,7 +119,6 @@ export default function MMLURunner() {
                 seed,
                 n
             });
-            append(`Done – score ${correctCnt}/${n} (${pct}%)`);
             setState("done");
         } catch (e: any) {
             append("ERROR " + e.message);
