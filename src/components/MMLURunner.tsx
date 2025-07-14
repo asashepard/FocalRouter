@@ -151,9 +151,14 @@ export default function MMLURunner() {
                 </label>
             </div>
             {state !== "running" && (
-                <button onClick={run} style={{ marginBottom: 8 }}>
-                    Run&nbsp;({n}Q)
-                </button>
+                <>
+                    <button onClick={run} style={{ marginBottom: 8 }}>
+                        Run&nbsp;({n}Q)
+                    </button>
+                    <div>
+                        Costs will be incurred based on the models used.
+                    </div>
+                </>
             )}
             {state === "running" && (
                 <div style={{ marginBottom: 8 }}>
