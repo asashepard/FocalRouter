@@ -106,7 +106,7 @@ export default function DemoChat() {
   };
 
   const saveKeys = () => {
-    const fields = ["openai", "anthropic", "google", "mistral"] as const;
+    const fields = ["openai", "google", "mistral"] as const;
     const obj: Record<string, string> = {};
     fields.forEach((f) => {
       const el = document.getElementById(`k-${f}`) as HTMLInputElement | null;
@@ -125,7 +125,7 @@ export default function DemoChat() {
 
   return (
     <div style={{ border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>Live Demo</div>
+      <div style={{ fontWeight: 600, marginBottom: 8 }}>Router Chat</div>
       <div style={{ height: 400, overflowY: "auto", marginBottom: 8 }}>
         {msgs.map((m, i) => (
           <div
@@ -157,7 +157,7 @@ export default function DemoChat() {
       {needKeys && (
         <div style={{ marginTop: 16, border: "1px solid #ccc", padding: 12 }}>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>API Keys</div>
-          {(["openai", "anthropic", "google", "mistral"] as const).map((id) => (
+          {(["openai", "google", "mistral"] as const).map((id) => (
             <input
               key={id}
               id={`k-${id}`}

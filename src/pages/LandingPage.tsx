@@ -1,5 +1,6 @@
 import React from "react";
 import SidePanel from "../components/SidePanel";
+import RightPanel from "../components/RightPanel";
 import DemoChat from "../components/DemoChat";
 
 export default function LandingPage() {
@@ -18,6 +19,7 @@ export default function LandingPage() {
       >
         <DemoChat />
       </div>
+      <RightPanel />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const PROVIDERS = ["openai", "anthropic", "google", "mistral"] as const;
+const PROVIDERS = ["openai", "google", "mistral"] as const;
 
 export default function ApiKeysForm() {
   const [keys, setKeys] = useState<Record<string, string>>(() => {
