@@ -7,7 +7,7 @@ import {
 import { classifyTask } from "./classifyTask";
 import { queryRouterLLM } from "./routerLLM";
 import { DEFAULT_PIPELINE, STEP_CATALOG } from "./stepRegistry";
-import { banditRank, paretoSelect, banditUpdate } from "./routeAlgorithms";
+import { banditRank, paretoSelect, banditUpdate, scoreRank } from "./routeAlgorithms";
 
 type StepId = "classifier" | "llm" | "cheapest";
 
@@ -86,6 +86,11 @@ export const chooseBestModelForPrompt = async (
         }
 
         if (cat === "rank") {
+            if (id === "score") {
+                cands = scoreRank(cands);
+                steps.push(`Score rank → ${cands.length}`);
+                continue;
+            }
             if (id === "bandit") {
                 cands = banditRank(cands, "global");
                 steps.push(`Bandit → top ${cands.length}`);
