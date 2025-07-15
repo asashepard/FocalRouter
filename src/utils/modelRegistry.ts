@@ -43,14 +43,6 @@ export const MODEL_REGISTRY: ModelInfo[] = [
 
     /* ────────── Google Gemini (v1 endpoints) ────────── */
     {
-        name: "gemini-2.5-pro",
-        provider: "google",
-        contextSize: 2_000_000,          // breakthrough 2 M-token window :contentReference[oaicite:4]{index=4}
-        inputPricePerMillion: 1.25,
-        outputPricePerMillion: 5.0,
-        intelligenceScore: 0.52
-    },
-    {
         name: "gemini-2.5-flash",
         provider: "google",
         contextSize: 1_000_000,          // 1 M window :contentReference[oaicite:5]{index=5}
@@ -77,6 +69,14 @@ export const MODEL_REGISTRY: ModelInfo[] = [
     },
 
     /* ────────── Mistral ────────── */
+    {
+        name: "mistral-small-latest",
+        provider: "mistral",
+        contextSize: 32000,
+        inputPricePerMillion: 0.10,
+        outputPricePerMillion: 0.30,
+        intelligenceScore: 0.35
+    },
     {
         name: "mistral-tiny",
         provider: "mistral",
